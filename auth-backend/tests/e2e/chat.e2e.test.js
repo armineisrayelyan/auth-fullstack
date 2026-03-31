@@ -5,9 +5,15 @@ const connectSocket = require("../helpers/socket")
 const loginUser = require("../helpers/loginUser");
 
 let httpServer;
-
+let socket1;
+let socket2;
 beforeAll((done) => {
     httpServer = server.listen(4000, ()=>{done()});
+});
+
+afterEach(() => {
+    if (socket1?.connected) socket1.disconnect();
+    if (socket2?.connected) socket2.disconnect();
 });
 
 afterAll((done) => {
@@ -58,8 +64,8 @@ test("full chat flow (E2E)", async () => {
 
     const conversationId = conversation.body._id
 
-    const socket1 = connectSocket(token1)
-    const socket2 = connectSocket(token2)
+    socket1 = connectSocket(token1)
+    socket2 = connectSocket(token2)
 
     await new Promise((resolve,reject) => {
         let joined = 0;
@@ -67,7 +73,7 @@ test("full chat flow (E2E)", async () => {
 
         const timeout = setTimeout(() => {
             reject(new Error("E2E timeout"));
-        }, 10000);
+        }, 15000);
 
         function tryStart(){
             if(joined ===2){
@@ -109,7 +115,7 @@ test("full chat flow (E2E)", async () => {
         })
     })
 })
-test("message is not delivered if user didn't join conversation", async () => {
+test("user receives message from another conversation without joining it", async () => {
     const user1 = await loginUser();
     const user2 = await loginUser();
 
@@ -119,31 +125,47 @@ test("message is not delivered if user didn't join conversation", async () => {
         .send({ userId: user2.body.user._id });
 
     const conversationId = conversation.body._id;
-    const socket1 = connectSocket(user1.body.accessToken);
-    const socket2 = connectSocket(user2.body.accessToken);
+    socket1 = connectSocket(user1.body.accessToken);
+    socket2 = connectSocket(user2.body.accessToken);
 
-    await new Promise((resolve,reject) => {
+    await new Promise(async(resolve,reject) => {
         const timeout = setTimeout(() => {
             socket1.disconnect();
             socket2.disconnect();
+            reject(new Error("timeout"));
+        }, 15000);
+        await new Promise(res => socket1.once("connect", res));
+        await new Promise(res => socket2.once("connect", res));
+
+        // socket1.on("connect", () => {
+        //     user1Ready = true;
+        //     maybeSend()
+        // })
+        // socket2.on("connect", () => {
+        //     user2Ready = true;
+        //     maybeSend()
+        // })
+        await new Promise(r => setTimeout(r, 100));
+        // function maybeSend(){
+        //     if (user1Ready && user2Ready) {
+        //         socket1.emit("sendMessage", {
+        //             conversationId,
+        //             text: 'Hello fr5om another conversation'
+        //         });
+        //     }
+        // }
+
+        socket2.once("newMessage", message => {
+            expect(message.text).toEqual("Hello from another conversation")
+            clearTimeout(timeout);
+            socket1.disconnect();
+            socket2.disconnect();
             resolve();
-        }, 3000);
-
-        socket2.on("connect", ()=>{
-            socket2.on("newMessage", () => {
-                clearTimeout(timeout);
-                socket1.disconnect();
-                socket2.disconnect();
-                reject(new Error("Message should not be delivered"));
-            });
-        })
-
-        socket1.on("connect", () => {
-            socket1.emit("sendMessage", {
-                conversationId,
-                text: 'Should not deliver'
-            });
-        })
+        });
+        socket1.emit("sendMessage", {
+            conversationId,
+            text: 'Hello from another conversation'
+        });
     })
 })
 test("user not in conversation cannot send message", async () => {

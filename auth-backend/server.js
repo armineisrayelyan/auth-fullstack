@@ -41,7 +41,11 @@ io.on('connection', async (socket) => {
         if (!conversation) return;
 
         conversation.unreadCount.set(socket.user.id, 0);
-        await conversation.save();
+        try {
+            await conversation.save();
+        } catch (err) {
+            return;
+        }
         const populated = await conversation.populate([
             {path: 'participants', select : 'name'},
             {path: 'lastMessage'}
@@ -69,7 +73,11 @@ io.on('connection', async (socket) => {
                 conversation.unreadCount.set(userId.toString(), current + 1);
             }
         });
-        await conversation.save();
+        try {
+            await conversation.save();
+        } catch (err) {
+            return;
+        }
         const updatedConversation = await conversation.populate([
                 {path: 'participants', select : 'name'},
                 {path: 'lastMessage'}

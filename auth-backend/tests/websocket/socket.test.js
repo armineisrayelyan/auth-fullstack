@@ -6,10 +6,15 @@ const app = require('../../app')
 const { server } = require("../../server");
 
 let httpServer;
+let socket1;
 
 beforeAll((done) => {
     httpServer = server.listen(4000, ()=>{done()});
 });
+
+afterEach(() => {
+    if(socket1?.connected) socket1.disconnect();
+})
 
 afterAll((done) => {
     httpServer.close(done);
@@ -79,7 +84,7 @@ test("message is broadcast to conversation participants", async () => {
          })
      const conversationId = conversation.body._id
 
-     const socket1 = io("http://localhost:4000", {
+     socket1 = io("http://localhost:4000", {
          auth: { token: user1.body.accessToken }
      });
      const socket2 = io("http://localhost:4000", {
@@ -142,7 +147,7 @@ test("markAsRead resets unreadCount", async () => {
          })
      const conversationId = conversation.body._id
 
-     const socket1 = io("http://localhost:4000", {
+     socket1 = io("http://localhost:4000", {
          auth: { token: user1.body.accessToken }
      });
 
