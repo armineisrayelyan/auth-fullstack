@@ -1,0 +1,66 @@
+name: Tests
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:6
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install backend dependencies
+        run: npm install
+        working-directory: ./auth-backend
+
+      - name: Run backend tests
+        env:
+          MONGO_URI: mongodb://localhost:27017/auth_demo_test
+          ACCESS_TOKEN_SECRET: testsecret
+          REFRESH_TOKEN_SECRET: testrefreshsecret
+          NODE_ENV: test
+          ACCESS_TOKEN_EXPIRES: 15m
+          REFRESH_TOKEN_EXPIRES: 7d
+        run: |
+          sleep 5
+          npm test -- --coverage --runInBand
+        working-directory: ./auth-backend
+
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: ./auth-frontend
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+        working-directory: ./auth-frontend
+
+      - name: Start backend server
+        run: | 
+          cd auth-backend
+          npm start &
+
+      - name: Start frontend
+        run: |
+          cd auth-frontend
+          npm run dev &
+          
+      - name: Wait for servers
+        run: npx wait-on http://localhost:3000 http://localhost:5173
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        working-directory: ./auth-frontend
