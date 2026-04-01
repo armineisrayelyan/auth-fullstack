@@ -13,6 +13,7 @@ mongoose.connect(process.env.MONGO_URI)
     .catch(err => console.log(err));
 
 const server = http.createServer(app);
+const PORT = process.env.PORT || 3000;
 
 const io = new Server(server, {
     cors: {
@@ -110,9 +111,10 @@ io.on('connection', async (socket) => {
     })
 })
 
-
-server.listen(3000, () => {
-    console.log('Server running on port 3000');
-});
+if (require.main === module) {
+    server.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
 module.exports = { io, server };
