@@ -35,6 +35,7 @@ io.on('connection', async (socket) => {
         socket.join(c._id.toString());
     });
     console.log('Joined all conversations');
+    socket.emit("ready");
 
     socket.on('joinConversation',  async (conversationId) => {
         socket.join(conversationId);

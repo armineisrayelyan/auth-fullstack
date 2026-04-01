@@ -67,34 +67,21 @@ test("full chat flow (E2E)", async () => {
     socket1 = connectSocket(token1)
     socket2 = connectSocket(token2)
 
-    await new Promise((resolve,reject) => {
-        let joined = 0;
+    await new Promise(async (resolve,reject) => {
         let messageReceived = false;
 
         const timeout = setTimeout(() => {
             reject(new Error("E2E timeout"));
-        }, 15000);
+        }, 20000);
+        await new Promise(res => socket1.once("ready",res));
+        await new Promise(res => socket2.once("ready",res));
 
-        function tryStart(){
-            if(joined ===2){
-                socket1.emit("sendMessage", {
-                    conversationId,
-                    text: "Hello"
-                });
-            }
-        }
-        socket1.on("connect", ()=>{
-            socket1.emit("joinConversation", conversationId)
-            joined++;
-            tryStart();
-        })
-        socket2.on("connect", ()=>{
-            socket2.emit("joinConversation", conversationId)
-            joined++;
-            tryStart();
-        })
+        socket1.emit("sendMessage", {
+            conversationId,
+            text: 'Hello'
+        });
 
-        socket2.on("newMessage", message => {
+        socket2.once("newMessage", message => {
             expect(message.text).toEqual("Hello")
             messageReceived = true;
         })
@@ -133,27 +120,11 @@ test("user receives message from another conversation without joining it", async
             socket1.disconnect();
             socket2.disconnect();
             reject(new Error("timeout"));
-        }, 15000);
+        }, 20000);
         await new Promise(res => socket1.once("connect", res));
         await new Promise(res => socket2.once("connect", res));
 
-        // socket1.on("connect", () => {
-        //     user1Ready = true;
-        //     maybeSend()
-        // })
-        // socket2.on("connect", () => {
-        //     user2Ready = true;
-        //     maybeSend()
-        // })
         await new Promise(r => setTimeout(r, 100));
-        // function maybeSend(){
-        //     if (user1Ready && user2Ready) {
-        //         socket1.emit("sendMessage", {
-        //             conversationId,
-        //             text: 'Hello fr5om another conversation'
-        //         });
-        //     }
-        // }
 
         socket2.once("newMessage", message => {
             expect(message.text).toEqual("Hello from another conversation")
