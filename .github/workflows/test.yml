@@ -53,6 +53,14 @@ jobs:
           cd auth-backend
           npm start &
           sleep 5
+        env:
+          PORT: 3000
+          MONGO_URI: mongodb://localhost:27017/auth_demo_test
+          ACCESS_TOKEN_SECRET: testsecret
+          REFRESH_TOKEN_SECRET: testrefreshsecret
+          NODE_ENV: test
+          ACCESS_TOKEN_EXPIRES: 15m
+          REFRESH_TOKEN_EXPIRES: 7d
 
       - name: Start frontend
         run: |
