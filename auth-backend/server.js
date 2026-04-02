@@ -113,7 +113,7 @@ io.on('connection', async (socket) => {
 })
 
 if (require.main === module) {
-    server.listen(PORT, () => {
+    server.listen(PORT, "0.0.0.0",() => {
         console.log(`Server running on port ${PORT}`);
     });
 }
