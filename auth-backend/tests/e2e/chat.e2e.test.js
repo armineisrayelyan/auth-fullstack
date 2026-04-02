@@ -67,32 +67,29 @@ test("full chat flow (E2E)", async () => {
     socket1 = connectSocket(token1)
     socket2 = connectSocket(token2)
 
-    await new Promise(async (resolve,reject) => {
+    await new Promise( async (resolve,reject) => {
         let messageReceived = false;
-
         const timeout = setTimeout(() => {
             reject(new Error("E2E timeout"));
         }, 20000);
+
         await new Promise(res => socket1.once("ready",res));
         await new Promise(res => socket2.once("ready",res));
-
-        socket1.emit("sendMessage", {
-            conversationId,
-            text: 'Hello'
-        });
+        await new Promise(r=>setTimeout(r,100));
 
         socket2.once("newMessage", message => {
             expect(message.text).toEqual("Hello")
             messageReceived = true;
         })
         socket2.on("conversationUpdated", conv => {
+            if (!messageReceived) return;
             const unread = conv.unreadCount[user2Login.body.user._id];
-            if (unread === 1 && messageReceived){
+            if (unread === 1){
                 expect(conv.lastMessage.text).toEqual("Hello")
                 expect(conv.unreadCount[user2Login.body.user._id]).toBe(1)
                 socket2.emit("markAsRead", conversationId)
             }
-            if (unread === 0 && messageReceived){
+            if (unread === 0){
                 expect(conv.unreadCount[user2Login.body.user._id]).toBe(0)
                 clearTimeout(timeout);
                 socket1.disconnect();
@@ -100,6 +97,10 @@ test("full chat flow (E2E)", async () => {
                 resolve();
             }
         })
+        socket1.emit("sendMessage", {
+            conversationId,
+            text: 'Hello'
+        });
     })
 })
 test("user receives message from another conversation without joining it", async () => {
